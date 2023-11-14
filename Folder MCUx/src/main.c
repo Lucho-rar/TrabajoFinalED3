@@ -99,7 +99,7 @@ int main(void) {
 	configIntExt();
 	configTimer();
 	//configADC();
-	configDMA();
+	//configDMA();
 	configUART();
 	portada();
 	LPC_GPIO2->FIOCLR |= (1<<8);
@@ -167,8 +167,7 @@ void configGpio(void){
 
 	//CONFIGURACION DEL PUERTO 2
 
-		//pinCfg.Funcnum = 0; // Función de GPIO
-		//pinCfg.OpenDrain = PINSEL_PINMODE_NORMAL;
+
 	    pinCfg.Portnum 	=	PINSEL_PORT_2;
 		pinCfg.Pinmode = PINSEL_PINMODE_TRISTATE;
 
@@ -208,7 +207,7 @@ void configGpio(void){
 		PINSEL_ConfigPin(&pinsel_cfg);
 }
 
-void confDAC(void){	// Se podria configurar el bit BIAS para consumo mas eficiente
+void confDAC(void){
 	uint32_t tmp;
 
 	DAC_CONVERTER_CFG_Type DAC_ConverterConfigStruct;
@@ -217,10 +216,7 @@ void confDAC(void){	// Se podria configurar el bit BIAS para consumo mas eficien
 
 	DAC_Init(LPC_DAC);
 
-	/* set time out for DAC*/
-	// Por regla de 3, si 60 muestras [NUM_SINE_SAMPLE] se envian cada 20ms [SINE_FREC_HZ = 50Hz],
-	// ¿Cada cuanto tiempo se enviara 1 muestra? t_m = 1*20ms/60 = 0,333ms
-	// Entonces el DMA debe interrumpir cada t_m.
+
 	tmp = (PCLK_DAC_IN_MHZ*1000000)/(SINE_FREQ_IN_HZ*NUM_SINE_SAMPLE);
 	DAC_SetDMATimeOut(LPC_DAC,tmp);
 
@@ -391,21 +387,11 @@ void EINT0_IRQHandler(void){
 
 	uint8_t tmp[] = "\n\n\n¡El ejercicio ha comenzado!\n\n\n\r";
 	UART_Send(LPC_UART3,tmp, sizeof(tmp),BLOCKING);
-	//free(tmp);
 	uint8_t tmp1[] = "Distancia \t Pulsaciones (xMin) \t Tiempo\n\r";
 	UART_Send(LPC_UART3,tmp1, sizeof(tmp1),BLOCKING);
-	//free(tmp1);
-	//if (upflag==0){
-	  //  LPC_TIM3->TCR = 0x03; //Reset Timer
-     //		LPC_TIM3->TCR &=~ (1<<1); //Enable timer
-	   TIM_Cmd(LPC_TIM0, ENABLE);//Habilita el timer del  recorrido
-	   TIM_Cmd(LPC_TIM2, ENABLE);
-	 //  TIM_Cmd(LPC_TIM0, ENABLE);//Habilita el timer de la medicion de temperatura
-	 //  upflag=1;
-	//}
-	//TIM_ClearIntPending(LPC_TIM3, TIM_MR0_INT);
-	//TIM_ClearIntPending(LPC_TIM0, TIM_MR1_INT);
-	  // ADC_StartCmd(LPC_ADC,ADC_START_CONTINUOUS);
+
+	TIM_Cmd(LPC_TIM0, ENABLE);
+	TIM_Cmd(LPC_TIM2, ENABLE);
 
 	LPC_SC->EXTINT|=EINT0;
 
@@ -449,28 +435,10 @@ void EINT1_IRQHandler(void){
 	char buffer2[cantB];
 	sprintf(buffer2, "*%d*%d*%d*", distancia,frecCard,cont_timer0);
 	UART_Send(LPC_UART3, (uint8_t*)buffer2, sizeof(buffer2), BLOCKING);
-	/*
-	 if(distancia <10){
-		 char buffer2[3];
-		 sprintf(buffer2, "*%d*", distancia);
-		 UART_Send(LPC_UART3, (uint8_t*)buffer2, sizeof(buffer2), BLOCKING);
-	 }else if(distancia>10 && distancia<100){
-		 char buffer2[4];
-		 sprintf(buffer2, "*%d*", distancia);
-		 UART_Send(LPC_UART3, (uint8_t*)buffer2, sizeof(buffer2), BLOCKING);
-	 }else if (distancia>100 && distancia<1000){
-		 char buffer2[5];
-		 sprintf(buffer2, "*%d*", distancia);
-		 UART_Send(LPC_UART3, (uint8_t*)buffer2, sizeof(buffer2), BLOCKING);
-	 }else if (distancia>1000){
-		 char buffer2[6];
-		 sprintf(buffer2, "*%d*", distancia);
-		 UART_Send(LPC_UART3, (uint8_t*)buffer2, sizeof(buffer2), BLOCKING);
-	 }
-	 */
+
 	distancia =0;
 	cont_timer0 =0;
-	//UART_Send(LPC_UART3,fin, sizeof(fin),BLOCKING);
+
 	DMASrc_Buffer[0] = distancia; //distancia recorrida en m
 	DMASrc_Buffer[1] = cont_timer0; //tiempo recorrido en s
 	DMASrc_Buffer[2] = velocidad;   //velocidad en km/h
@@ -480,9 +448,7 @@ void EINT1_IRQHandler(void){
 
 	/*Reseteo el reloj */
 	unidad_segundos = 0; decena_segundos = 0; unidad_minutos=0; decena_minutos=0; unidad_hora=0;
-	//GPDMA_ChannelCmd(0, ENABLE);
 
-	//GPDMA_ChannelCmd(0, ENABLE);
 
 	LPC_SC->EXTINT|=EINT1;
 }
@@ -589,14 +555,6 @@ void TIMER0_IRQHandler(void){
 		}
 
 
-		 // distancia = velocidad * cont_timer0 * 0.28;
-		 //sprintf(buffer, "\t %f ", distancia);
-		 //UART_Send(LPC_UART3, (uint8_t*)buffer, sizeof(buffer), BLOCKING);
-		 //sprintf(buffer1, "\t %d ", frecCard);
-		 //UART_Send(LPC_UART3, (uint8_t*)buffer1, sizeof(buffer1), BLOCKING);
-		 //configUART();
-
-		 //free(buffer2);
 
 
 		   	// x:59:59 ->incremento Hora y reset Min&Seg
