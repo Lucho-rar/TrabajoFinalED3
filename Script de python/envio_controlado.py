@@ -11,9 +11,10 @@ rt = []
 pulsaciones_promedio = 123
 tiempo =3 
 kcal = 2
-wform = []
+wform = [20, 33, 37 , 15]
 rebote = 0;
 datos_enviados = 0
+
 
 def actualizar_arreglo(nuevo_val):
     for i in range (3):
@@ -110,11 +111,11 @@ def enviar_datos_placa():
     salida = 1;
     print("Conexion para envio establecida\n")
 
+    #for i in range(len(wform)):
     for i in range(len(wform)):
-    ##if (len(wform)!=0):
         datos_a_enviar = struct.pack('!B', wform[i])
-        conex.write(datos_a_enviar) 
-        time.sleep(2);
+        conex.write(datos_a_enviar)
+        time.sleep(5)
         #datos_enviados = datos_enviados + 1
     #else:
         #datos_enviados=0;

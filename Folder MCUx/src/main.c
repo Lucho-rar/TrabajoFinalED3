@@ -55,7 +55,8 @@ void config_GPIO(void);
 void confDAC(void);
 void portada();
 void delay_sin();
-void cargar_valor_a_wform(uint32_t v);
+void cargar_valor_a_wform(uint8_t v);
+void formar_onda(void);
 float temp=0;
 uint32_t cont_timer0=0;
 uint32_t distancia = 0;
@@ -69,9 +70,11 @@ uint8_t frec_card[SIZE];
 uint32_t frecCard=0;
 uint8_t upflag=0;
 
+uint8_t auxiliar_ult =0;
+
 
 #define DMA_SIZE 60
-#define NUM_SINE_SAMPLE 60
+#define NUM_SINE_SAMPLE 42
 #define SINE_FREQ_IN_HZ 60
 #define PCLK_DAC_IN_MHZ 25 //CCLK divided by 4
 uint32_t dac_lut[NUM_SINE_SAMPLE];
@@ -89,7 +92,7 @@ uint8_t unidad_hora = 0 ;
 uint8_t saludo = 0;
 uint8_t valoresDisplay[10] = {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0xD7,0x7F,0x67};
 uint32_t hola[4] = {0b1101110,0b0111111 , 0b0111000 , 0b1101111};
-
+uint8_t final_lut[4];
 uint32_t DMASrc_Buffer[DMA_TRANSFER_SIZE];
 uint32_t DMADst_Buffer[DMA_TRANSFER_SIZE];
 
@@ -718,7 +721,8 @@ void UART3_IRQHandler(){
 	uint32_t intsrc,temporal, temporal1;
 	intsrc = UART_GetIntId(LPC_UART3);
 	temporal = intsrc & UART_IIR_INTID_MASK;
-	uint8_t val[1] = "";
+    uint8_t val[1];
+	//char val[1]= "";
 	if(temporal  == UART_IIR_INTID_RLS){
 		temporal1 =UART_GetLineStatus(LPC_UART2);
 		temporal1 &= (UART_LSR_OE | UART_LSR_PE | UART_LSR_FE | UART_LSR_BI | UART_LSR_RXFE);
@@ -730,41 +734,86 @@ void UART3_IRQHandler(){
 	if((temporal==UART_IIR_INTID_RDA) || (temporal ==UART_IIR_INTID_CTI)){
 		UART_Receive(LPC_UART3,val,sizeof(val),NONE_BLOCKING);
 	}
-	uint32_t valor_final = *val;
-	cargar_valor_a_wform(valor_final);
+	uint8_t nuevo  =  *val ;
+	//uint32_t valor_final = *val;
+	//cargar_valor_a_wform(val);
+	//if(final_lut[3]!=0) formar_onda();
+
+
+	if(auxiliar_ult!=3){
+		final_lut[auxiliar_ult] =  nuevo;
+		auxiliar_ult++;
+	}else{
+		auxiliar_ult=0;
+		formar_onda();
+	}
+	//formar_onda();
 	return;
 }
 
-void cargar_valor_a_wform(uint32_t v){
-	for (uint8_t i = 0 ; i < 9 ; i ++){
-		salida_dac[i] = salida_dac[i+1];			//swap de datos	. el valor nuevo va al final de la wform
-	}
-	salida_dac[9]= v;
+void cargar_valor_a_wform(uint8_t vr){
+	//for(int i = 0 ; i < 3 ; i++){
+	//	final_lut[i] = final_lut[i+1];
+	//}
 
-	for(uint8_t i=0;i<NUM_SINE_SAMPLE;i++)
-	{
-			if(i<=15)
-			{
-				dac_lut[i] = 512 + 512*salida_dac[i]/10000;
-				if(i==15) dac_lut[i]= 1023;			//El ultimo en 1023 para que se note
-			}
-			else if(i<=30)
-			{
-				dac_lut[i] =0;
-			}
-			else if(i<=45)
-			{
-				dac_lut[i] = 0;
-			}
-			else
-			{
-				dac_lut[i] = 0;
-			}
-			dac_lut[i] = (dac_lut[i]<<6);
+	if (auxiliar_ult!=3){
+		final_lut[auxiliar_ult] = vr;
+		auxiliar_ult++;
+	}else{
+		auxiliar_ult=0;
+		formar_onda();
 	}
+	//final_lut[3] = val;
+}
+
+void formar_onda(){
+
+	confDAC();
+	//uint32_t i;
+
+	/*
+	//Prepare DAC sine look up table
+	for(i=0;i<NUM_SINE_SAMPLE;i++)
+	{
+		if(i<=15)
+		{
+			dac_lut[i] = 512 + 512*sin_0_to_90_16_samples[i]/10000;
+			if(i==15) dac_lut[i]= 1023;
+		}
+		else if(i<=30)
+		{
+			dac_lut[i] =0;
+		}
+		else if(i<=45)
+		{
+			dac_lut[i] = 0;
+		}
+		else
+		{
+			dac_lut[i] = 0;
+		}
+		dac_lut[i] = (dac_lut[i]<<6);
+	}*/
+	for(uint32_t i = 0 ;  i < 42 ; i ++){
+		if(i<12) dac_lut [i] = 24 * final_lut[0];
+		else if(i>12 && i <=22) dac_lut[i] = 24*final_lut[1];
+		else if(i>22 && i<=34) dac_lut[i] = 24*final_lut[2];
+		else if(i>34) dac_lut[i] = 1023;
+		dac_lut[i] = (dac_lut[i]<<6);
+	}
+	/*
+	for(i=0;i<42;i++)
+	{
+			if(i<=12) dac_lut[i] = 600;
+			else if(i>12 && i<=22) dac_lut[i]= 700;
+			else if(i>22 && i<=34) dac_lut[i] = 200;
+			else if (i>34) dac_lut[i]= 1023;
+			//else dac_lut[i] = 24*(22-i);
+			dac_lut[i] = (dac_lut[i]<<6);
+	}*/
 	configDMA();
 	GPDMA_ChannelCmd(0, ENABLE);
-	while (1);
+	//while (1);
 
 }
 void portada(){
